@@ -1,8 +1,8 @@
 {
-  "name": "typescript-action",
-  "version": "0.0.0",
+  "name": "cs-to-ts-action",
+  "version": "1.0.0",
   "private": true,
-  "description": "TypeScript template action",
+  "description": "Action to check if c# and ts models match",
   "main": "lib/main.js",
   "scripts": {
     "build": "tsc",
@@ -15,14 +15,15 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/actions/typescript-action.git"
+    "url": "git+https://github.com/antoninklopp/cs-to-ts-action.git"
   },
   "keywords": [
-    "actions",
-    "node",
-    "setup"
+    "ts",
+    "cs",
+    "c#",
+    "action"
   ],
-  "author": "YourNameOrOrganization",
+  "author": "antoninklopp",
   "license": "MIT",
   "dependencies": {
     "@actions/core": "^1.2.0"
