@@ -9,4 +9,4 @@ inputs:
     default: '.github/cs-to-ts.yml'
 runs:
   using: 'node12'
-  main: 'dist/index.js'
+  main: 'lib/main.js'
