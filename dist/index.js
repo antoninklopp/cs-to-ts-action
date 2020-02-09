@@ -304,6 +304,9 @@ function getConfig() {
     };
 }
 exports.getConfig = getConfig;
+exports.errorLabels = {
+    notMatching: 'cs not matching ts'
+};
 
 
 /***/ }),
@@ -17514,7 +17517,8 @@ function run() {
                     tsPath = globs[0].replace(/\*/, '');
                 }
             }
-            let commentList = ['Cs to ts checks'];
+            let commentList = ['Cs to ts checks', ''];
+            let allMatching = true;
             for (let i = 0; i < changedCsFile.length; i++) {
                 let tsFileName = changedCsFile[i].name
                     .replace(csPath, tsPath)
@@ -17524,20 +17528,23 @@ function run() {
                 try {
                     tsContent = yield fetchContent(client, tsFileName);
                 }
-                catch (_a) { }
+                catch (_a) {
+                }
                 const tsContentFromCs = extension_1.cs2ts(csFileContent, utils_1.getConfig());
-                let label = `content Not Matching File: ${changedCsFile[i].name}`;
                 if (removeSpaces(tsContentFromCs) !== removeSpaces(tsContent)) {
                     commentList.push(`**${changedCsFile[i].name} not matching ${tsFileName} content**`);
-                    yield addLabels(client, prNumber, [label]);
+                    allMatching = false;
                 }
                 else {
                     commentList.push(`*${changedCsFile[i].name} matching ${tsFileName} content*`);
-                    yield removeLabel(client, prNumber, label);
                 }
             }
-            if (changedCsFile.length > 0) {
-                yield addLabels(client, prNumber, ['csFileChanged']);
+            if (!allMatching) {
+                yield addLabels(client, prNumber, [utils_1.errorLabels.notMatching]);
+            }
+            else {
+                yield removeLabel(client, prNumber, utils_1.errorLabels.notMatching);
+                commentList.push("All files matching");
             }
             yield addComment(client, prNumber, commentList.join('\n'));
         }

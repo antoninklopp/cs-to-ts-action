@@ -1,4 +1,4 @@
-import {ExtensionConfig} from './Csharp2ts/config'
+import { ExtensionConfig } from './Csharp2ts/config'
 
 export function getConfig(): ExtensionConfig {
     return {
@@ -29,4 +29,8 @@ export function getConfig(): ExtensionConfig {
         /*True to preserve fields and property modifiers. Default is false*/
         preserveModifiers: false
     }
+}
+
+export const errorLabels = {
+    notMatching: 'cs not matching ts'
 }
