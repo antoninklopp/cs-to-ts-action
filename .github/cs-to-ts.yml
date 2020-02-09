@@ -1,0 +1,5 @@
+cs: 
+  - tests/cs/*
+
+ts:
+  - tests/ts/*
