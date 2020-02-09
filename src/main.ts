@@ -69,11 +69,13 @@ async function run() {
 					`**${changedCsFile[i].name} not matching ${tsFileName} content**`
 				)
 				allMatching = false;
-			} else {
-				commentList.push(
-					`*${changedCsFile[i].name} matching ${tsFileName} content*`
-				)
 			}
+			// TODO : Add the possibility to also show files matching in config
+			// else {
+			// 	commentList.push(
+			// 		`*${changedCsFile[i].name} matching ${tsFileName} content*`
+			// 	)
+			// }
 		}
 
 		if (!allMatching) {
