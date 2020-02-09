@@ -1,0 +1,12 @@
+name: Cs-to-ts
+on: [pull_request]
+
+jobs:
+  label:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: antoninklopp/cs-to-ts-action@v1
+      with:
+        repo-token: "${{ secrets.GITHUB_TOKEN }}"
