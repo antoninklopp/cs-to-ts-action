@@ -32,7 +32,8 @@
     "eslint": "^6.8.0",
     "js-yaml": "^3.13.1",
     "minimatch": "^3.0.4",
-    "semver": "^6.1.1"
+    "semver": "^6.1.1",
+    "vscode": "^1.1.36"
   },
   "devDependencies": {
     "@types/jest": "^24.0.13",
@@ -51,8 +52,7 @@
   "husky": {
     "skipCI": true,
     "hooks": {
-      "pre-commit": "npm run build && npm run format",
-      "post-commit": "npm prune --production && git add node_modules/* && git commit -m \"Husky commit correct node modules\""
+      "pre-commit": "npm run build && npm run format"
     }
   }
 }
