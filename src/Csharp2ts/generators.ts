@@ -1,4 +1,3 @@
-import * as vscode from 'vscode';
 import * as types from './types';
 import { ExtensionConfig } from "./config";
 

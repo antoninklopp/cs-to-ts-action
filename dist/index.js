@@ -267,6 +267,47 @@ module.exports = function (str) {
 
 /***/ }),
 
+/***/ 38:
+/***/ (function(__unusedmodule, exports) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+function getConfig() {
+    return {
+        //True for camelCase, false for preserving original name. Default is true
+        propertiesToCamelCase: false,
+        //Removes specified postfixes from property names, types & class names. Can be array OR string. Case-sensitive.
+        trimPostfixes: [],
+        //Whether or not trim postfixes recursive. (e.g. with postfixes 'A' & 'B' PersonAAB will become PersonAA when it's false & Person when it's true)
+        recursiveTrimPostfixes: false,
+        //Ignore property initializer
+        ignoreInitializer: true,
+        //True to remove method bodies, false to preserve the body as-is
+        removeMethodBodies: true,
+        //True to remove class constructors, false to treat then like any other method
+        removeConstructors: false,
+        //'signature' to emit a method signature, 'lambda' to emit a lambda function. 'controller' to emit a lambda to call an async controller
+        methodStyle: 'signature',
+        //True to convert C# byte array type to Typescript string, defaults to true since the serialization of C# byte[] results in a string
+        byteArrayToString: true,
+        //"True to convert C# DateTime and DateTimeOffset to Typescript (Date | string), defaults to true since the serialization of C# DateTime results in a string"s
+        dateToDateOrString: true,
+        /*Modifiers to remove. Ex. if you want to remove private and internal members set to ['private', 'internal']*/
+        removeWithModifier: [],
+        /*If setted, any property or field that its name matches the given regex will be removed, Ex. if you want to remove backing fields starting with underscore set to "_[a-z][a-zA-Z0-9]*" */
+        removeNameRegex: '',
+        /*True to convert classes to interfaces, false to convert classes to classes. Default is true*/
+        classToInterface: true,
+        /*True to preserve fields and property modifiers. Default is false*/
+        preserveModifiers: false
+    };
+}
+exports.getConfig = getConfig;
+
+
+/***/ }),
+
 /***/ 45:
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
@@ -1096,6 +1137,42 @@ module.exports = new Type('tag:yaml.org,2002:str', {
 
 /***/ }),
 
+/***/ 113:
+/***/ (function(__unusedmodule, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+const compose_1 = __webpack_require__(179);
+exports.identifier = /[a-zA-Z\u00C0-\u00FF_][a-zA-Z\u00C0-\u00FF_0-9]*/;
+exports.space = /\s+/;
+exports.spaceOrLine = /(?:\s|\n|\r)+/;
+exports.spaceOrLineOptional = /(?:\s|\n|\r)*/;
+exports.spaceOptional = /\s*/;
+exports.anyChar = /(?:.|\n|\r)/;
+exports.spaceNotLine = /[ \t]/;
+exports.lineJump = /(?:\r|\n|(?:\r\n)|(?:\n\r))/;
+/**Regex que encaga con un tipo */
+exports.type = (() => {
+    const arrayDimension = compose_1.oneOrMore(/\[,*\]/);
+    const generic = compose_1.neasted("<", ">", 6, false);
+    const type = compose_1.seq(compose_1.nonCap(exports.identifier), compose_1.optional(compose_1.seq(exports.spaceOptional, generic)), compose_1.optional(compose_1.seq(exports.spaceOptional, /\?/)), compose_1.optional(compose_1.seq(exports.spaceOptional, arrayDimension)));
+    return type;
+})();
+function allMatches(text, pattern) {
+    const reg = new RegExp(pattern, "g");
+    let match;
+    const ret = [];
+    while (match = reg.exec(text)) {
+        ret.push(match);
+    }
+    return ret;
+}
+exports.allMatches = allMatches;
+
+
+/***/ }),
+
 /***/ 125:
 /***/ (function(module) {
 
@@ -1121,6 +1198,81 @@ function octokitDebug (octokit) {
       })
   })
 }
+
+
+/***/ }),
+
+/***/ 127:
+/***/ (function(__unusedmodule, exports) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+function ParseRegex(text, regex, parse) {
+    const result = new RegExp(regex, "g").exec(text);
+    if (result == null) {
+        return null;
+    }
+    else {
+        return {
+            index: result.index,
+            length: result[0].length,
+            data: parse(result.map(x => x))
+        };
+    }
+}
+exports.ParseRegex = ParseRegex;
+/**Find the next match of a given list of named parser functions */
+function firstMatch(code, functions) {
+    let firstMatch = null;
+    for (const func of functions) {
+        const match = func(code);
+        if (match && (firstMatch == null || match.index < firstMatch.index)) {
+            firstMatch = match;
+        }
+    }
+    return firstMatch;
+}
+exports.firstMatch = firstMatch;
+function subStrMatch(match, index) {
+    return {
+        data: match.data,
+        index: match.index + index,
+        length: match.length
+    };
+}
+/**Find all matches in a text block. Unmatched text is returned as a ParseResult with an undefined data */
+function allMatches(code, func) {
+    let index = 0;
+    const ret = [];
+    while (true) {
+        const substr = code.substr(index);
+        const matchOrNull = func(substr);
+        if (matchOrNull == null)
+            break;
+        const nextMatch = subStrMatch(matchOrNull, index);
+        //add the last unmatched code:
+        ret.push({
+            data: undefined,
+            index: index,
+            length: nextMatch.index - index
+        });
+        //add the matched code:
+        ret.push(nextMatch);
+        //increment the search index:
+        index = nextMatch.index + nextMatch.length;
+    }
+    //add the last unmatched code:
+    ret.push({
+        data: undefined,
+        index: index,
+        length: code.length - index
+    });
+    //Filter empty unmatched code:
+    const filtered = ret.filter(x => !(x.data == undefined && x.length == 0));
+    return filtered;
+}
+exports.allMatches = allMatches;
 
 
 /***/ }),
@@ -2233,6 +2385,99 @@ module.exports = class GraphqlError extends Error {
 
 /***/ }),
 
+/***/ 179:
+/***/ (function(__unusedmodule, exports) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+/**Return a regex that matches any of the given components */
+function any(...components) {
+    const sources = components.map(x => nonCap(x).source);
+    const sourceComb = sources.join("|");
+    const combined = "(?:" + sourceComb + ")";
+    return new RegExp(combined);
+}
+exports.any = any;
+/**Concat regexes */
+function seq(...components) {
+    return nonCap(new RegExp(components.map(x => x.source).join("")));
+}
+exports.seq = seq;
+/**Enclose a regex on a non capturing group */
+function nonCap(component) {
+    return new RegExp("(?:" + component.source + ")");
+}
+exports.nonCap = nonCap;
+/**Enclose a regex on a capturing group */
+function cap(component) {
+    return new RegExp("(" + component.source + ")");
+}
+exports.cap = cap;
+/**Enclose a regex on an optional non capturing group */
+function optional(component) {
+    return new RegExp(nonCap(component).source + "?");
+}
+exports.optional = optional;
+/**Enclose a regex on a zero or more repetition non capturing group */
+function zeroOrMore(component) {
+    return new RegExp(nonCap(component).source + "*");
+}
+exports.zeroOrMore = zeroOrMore;
+/**Enclose a regex on a one or more repetition non capturing group */
+function oneOrMore(component) {
+    return new RegExp(nonCap(component).source + "+");
+}
+exports.oneOrMore = oneOrMore;
+/**Return a regex that parses a list of items separated with the given separator.
+ * For capturing also an empty list enclose the commas regex on an optional regex
+ */
+function commas(item, separator) {
+    return seq(nonCap(item), zeroOrMore(seq(separator, item)));
+}
+exports.commas = commas;
+/**Create a regex that matches the given string  */
+function str(str) {
+    return new RegExp(escapeRegExp(str));
+}
+exports.str = str;
+function escapeRegExp(str) {
+    return str.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, "\\$&");
+}
+/**Create an array with a range of numbers */
+function range(start, count, step = 1) {
+    const ret = [];
+    for (let i = start; i < start + (count * step); i += step) {
+        ret.push(i);
+    }
+    return ret;
+}
+/**Return a regex that parses a neasted expression
+ * @param allowZeroDepth True to generate a regex that matches any text without the enclosing characters, false to make required at least one pair of enclosing characters
+*/
+function neasted(start, end, maxDepth, allowZeroDepth) {
+    if (start.length != 1)
+        throw new Error("start should be a single character");
+    if (end.length != 1)
+        throw new Error("end should be a single character");
+    start = escapeRegExp(start);
+    end = escapeRegExp(end);
+    const bodyCharSource = `[^${start}${end}]`;
+    const bodyChar = new RegExp(bodyCharSource);
+    const zeroDepth = nonCap(oneOrMore(bodyChar));
+    const repeat = (s, n) => range(0, n).map(x => s).join("");
+    const nDepth = (n) => n == 0 ? zeroDepth :
+        nonCap(new RegExp(repeat(start + bodyCharSource + "*", n - 1) + start + bodyCharSource + "*" + end + repeat(bodyCharSource + "*" + end, n - 1)));
+    const minDepth = allowZeroDepth ? 0 : 1;
+    const allDepths = range(minDepth, maxDepth + 1 - minDepth).map(i => nDepth(i));
+    const ret = any(...allDepths);
+    return ret;
+}
+exports.neasted = neasted;
+
+
+/***/ }),
+
 /***/ 183:
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
@@ -2843,6 +3088,477 @@ function isPlainObject(o) {
 }
 
 module.exports = isPlainObject;
+
+
+/***/ }),
+
+/***/ 252:
+/***/ (function(__unusedmodule, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+const compose_1 = __webpack_require__(179);
+const regexs = __webpack_require__(113);
+const parser_1 = __webpack_require__(127);
+;
+function generateSimpleJsDoc(indent, content) {
+    return indent + "/**" + content + " */";
+}
+exports.generateSimpleJsDoc = generateSimpleJsDoc;
+/**
+ * Generate a JS Doc
+ * @param code
+ * @param value
+ */
+function generateJsDoc(value) {
+    const isSimpleComment = (() => {
+        if (value.items.length == 3) {
+            const isSummaryStart = (x) => x.type == "start" && x.tag == "summary";
+            const isSummaryEnd = (x) => x.type == "end" && x.tag == "summary";
+            const start = value.items[0];
+            const content = value.items[1];
+            const end = value.items[2];
+            if (isSummaryStart(start) && isSummaryEnd(end) && content.type == "docStart") {
+                return {
+                    simple: true,
+                    indent: start.space,
+                    content: content.content
+                };
+            }
+            else {
+                return false;
+            }
+        }
+    })();
+    if (isSimpleComment) {
+        return generateSimpleJsDoc(isSimpleComment.indent, isSimpleComment.content);
+    }
+    const items = value.items;
+    if (items.length == 0)
+        return "";
+    const text = items.map((x, i) => {
+        const startChar = i == 0 ? "/**" : " * ";
+        switch (x.type) {
+            case "start":
+            case "selfClosing": {
+                const char = x.space != null ? startChar : "";
+                const begin = `${x.space || ""}${char}`;
+                if (x.tag == "summary") {
+                    return begin;
+                }
+                else {
+                    return `${begin}@${x.tag} ${x.attributes.map(x => x.value).join("")} `;
+                }
+            }
+            case "end":
+                return "";
+            case "docStart":
+                return `${x.space}${startChar}${x.content}`;
+            case "emptyNode":
+                return "";
+            case "content":
+                return x.text;
+            default:
+                return x;
+        }
+    });
+    const withSpaces = items.filter(x => x && x.space != null).map(x => x.space);
+    const lastSpace = withSpaces[withSpaces.length - 1] || " ";
+    const ret = text.join("") + lastSpace + " */";
+    return ret;
+}
+exports.generateJsDoc = generateJsDoc;
+/**Parse a C# XML Doc */
+function parseXmlDocBlock(code) {
+    const summaryBlockPatt = (() => {
+        const comment = compose_1.str("///");
+        const line = compose_1.seq(comment, /.*/);
+        const lineJump = compose_1.seq(regexs.lineJump, /\s*/);
+        const firstLine = compose_1.seq(/[ \t]*/, line);
+        const nextLine = compose_1.seq(lineJump, line);
+        const block = compose_1.seq(firstLine, compose_1.zeroOrMore(nextLine));
+        return block;
+    })();
+    const parseNodeTag = (() => {
+        const parsers = [
+            parseEmptyNode,
+            parseNodeStart,
+            parseSelfClosingNode,
+            parseNodeEnd,
+            parseDocStart
+        ];
+        return (code) => parser_1.firstMatch(code, parsers);
+    })();
+    const parseXml = (code) => parser_1.allMatches(code, parseNodeTag);
+    const toXmlContent = (code, x) => {
+        return {
+            space: undefined,
+            text: code.substr(x.index, x.length),
+            type: "content"
+        };
+    };
+    const r = parser_1.ParseRegex(code, compose_1.cap(summaryBlockPatt), match => ({
+        items: parseXml(match[1]).map(x => x.data ? x.data : toXmlContent(match[1], x))
+    }));
+    return r;
+}
+exports.parseXmlDocBlock = parseXmlDocBlock;
+const attribRegex = (captureGroups) => {
+    const capFunc = captureGroups ? compose_1.cap : x => x;
+    const body = /[^"]*/;
+    return compose_1.seq(regexs.spaceOptional, capFunc(regexs.identifier), regexs.spaceOptional, compose_1.str("="), regexs.spaceOptional, compose_1.str("\""), capFunc(body), compose_1.str("\""));
+};
+function parseAttribute(code) {
+    const attrib = attribRegex(true);
+    return parser_1.ParseRegex(code, attrib, match => ({
+        name: match[1],
+        value: match[2]
+    }));
+}
+function parseAttributes(code) {
+    const all = parser_1.allMatches(code, parseAttribute).filter(x => x.data != undefined);
+    return all.map(x => x.data);
+}
+/**Encaja con el inicio de una linea de comentarios y captura la secuencia de espacios anterior a esta, incluyendo el salto de linea si es que hay */
+const commentLineBegin = compose_1.seq(compose_1.cap(compose_1.seq(compose_1.optional(regexs.lineJump), regexs.spaceOptional)), compose_1.str("///"), regexs.spaceOptional);
+const { parseNodeStart, parseSelfClosingNode } = (() => {
+    const attrib = attribRegex(false);
+    const attribs = compose_1.zeroOrMore(attrib);
+    const nodeStart = (nodeEnd) => compose_1.seq(compose_1.optional(commentLineBegin), compose_1.str("<"), compose_1.cap(regexs.identifier), compose_1.cap(attribs), regexs.spaceOptional, compose_1.str(nodeEnd));
+    const parseNode = (type, nodeEnd) => (code) => parser_1.ParseRegex(code, nodeStart(nodeEnd), match => ({
+        space: match[1],
+        tag: match[2],
+        attributes: parseAttributes(match[3]),
+        type: type,
+    }));
+    return {
+        parseNodeStart: parseNode("start", ">"),
+        parseSelfClosingNode: parseNode("selfClosing", "/>")
+    };
+})();
+function parseNodeEnd(code) {
+    const nodeEnd = compose_1.seq(compose_1.optional(commentLineBegin), compose_1.str("</"), compose_1.cap(regexs.identifier), regexs.spaceOptional, compose_1.str(">"));
+    return parser_1.ParseRegex(code, nodeEnd, match => ({
+        space: match[1],
+        tag: match[2],
+        type: "end"
+    }));
+}
+function parseEmptyNode(code) {
+    const emptyBegin = compose_1.seq(compose_1.str("<"), compose_1.cap(regexs.identifier), regexs.spaceOptional, compose_1.str(">"));
+    const emptyEnd = compose_1.seq(compose_1.str("</"), regexs.identifier, regexs.spaceOptional, compose_1.str(">"));
+    const patt = compose_1.seq(compose_1.optional(commentLineBegin), emptyBegin, regexs.spaceOptional, emptyEnd);
+    return parser_1.ParseRegex(code, patt, match => ({
+        type: "emptyNode",
+        space: match[1],
+        tag: match[2]
+    }));
+}
+function parseDocStart(code) {
+    const patt = compose_1.seq(commentLineBegin, compose_1.cap(compose_1.zeroOrMore(/[^<\n\r]/)));
+    return parser_1.ParseRegex(code, patt, match => ({
+        type: "docStart",
+        space: match[1],
+        content: match[2]
+    }));
+}
+const text = `
+   	 /// <summary>
+    /// Obtiene todos los archivo ticket de un ticket, 
+    /// sin incluir su contenido <see cref="hola"/>
+    /// Hola
+    /// </summary>
+    /// <param name="idTicket"></param>
+    /// <param name="otro">Que rollo</param>
+    /// <returns></returns>
+   `;
+parseXmlDocBlock(text);
+
+
+/***/ }),
+
+/***/ 253:
+/***/ (function(__unusedmodule, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+const compose_1 = __webpack_require__(179);
+const regexs_1 = __webpack_require__(113);
+var CsTypeCategory;
+(function (CsTypeCategory) {
+    /**A type that can be represented as a collection of items */
+    CsTypeCategory[CsTypeCategory["Enumerable"] = 0] = "Enumerable";
+    /**A dictionary is equivalent to a typescript object */
+    CsTypeCategory[CsTypeCategory["Dictionary"] = 1] = "Dictionary";
+    /**A c$# nullable type where the value type is the first generic type */
+    CsTypeCategory[CsTypeCategory["Nullable"] = 2] = "Nullable";
+    /**A c# tuple */
+    CsTypeCategory[CsTypeCategory["Tuple"] = 3] = "Tuple";
+    /**A boolean type */
+    CsTypeCategory[CsTypeCategory["Boolean"] = 4] = "Boolean";
+    /**A numeric type */
+    CsTypeCategory[CsTypeCategory["Number"] = 5] = "Number";
+    /**A 1-dimension byte array */
+    CsTypeCategory[CsTypeCategory["ByteArray"] = 6] = "ByteArray";
+    /**A date type */
+    CsTypeCategory[CsTypeCategory["Date"] = 7] = "Date";
+    /**A string type */
+    CsTypeCategory[CsTypeCategory["String"] = 8] = "String";
+    /**Any type */
+    CsTypeCategory[CsTypeCategory["Any"] = 9] = "Any";
+    /**Unidentified type */
+    CsTypeCategory[CsTypeCategory["Other"] = 10] = "Other";
+    /**Task/promise task */
+    CsTypeCategory[CsTypeCategory["Task"] = 11] = "Task";
+})(CsTypeCategory || (CsTypeCategory = {}));
+/**Check if the given type is a simple that that passes as an uri parameter */
+function isUriSimpleType(x) {
+    const simpleCats = [
+        CsTypeCategory.Boolean,
+        CsTypeCategory.Number,
+        CsTypeCategory.Date,
+        CsTypeCategory.String,
+    ];
+    const isSimpleCat = (x) => simpleCats.indexOf(x) != -1;
+    const typeCat = getTypeCategory(x);
+    if (isSimpleCat(typeCat)) {
+        return true;
+    }
+    else if (typeCat == CsTypeCategory.Nullable && isSimpleCat(getTypeCategory(x.generics[0]))) {
+        return true;
+    }
+    return false;
+}
+exports.isUriSimpleType = isUriSimpleType;
+function getTypeCategory(x) {
+    const byteTypeName = ['byte', "Byte", "System.Byte"];
+    //Check if the type is byteArray
+    if (byteTypeName.indexOf(x.name) != -1 && x.generics.length == 0 && x.array.length == 1 && x.array[0].dimensions == 1) {
+        return CsTypeCategory.ByteArray;
+    }
+    const categories = [
+        {
+            category: CsTypeCategory.Enumerable,
+            types: ["List", "ObservableCollection", "Array", "IEnumerable", "IList", "IReadOnlyList", "Collection", "ICollection", "ISet", "HashSet"],
+            genericMin: 0,
+            genericMax: 1
+        }, {
+            category: CsTypeCategory.Nullable,
+            types: ["Nullable", "System.Nullable"],
+            genericMin: 1,
+            genericMax: 1
+        }, {
+            category: CsTypeCategory.Dictionary,
+            types: ["Dictionary", "IDictionary", "IReadOnlyDictionary"],
+            genericMin: 2,
+            genericMax: 2
+        }, {
+            category: CsTypeCategory.Boolean,
+            types: ["bool", "Boolean", "System.Boolean"],
+            genericMin: 0,
+            genericMax: 0
+        }, {
+            category: CsTypeCategory.Number,
+            types: [
+                'int', "Int32", "System.Int32",
+                'float', "Single", "System.Single",
+                "double", "Double", "System.Double",
+                'decimal', "Decimal", "System.Decimal",
+                'long', "Int64", "System.Int64",
+                ...byteTypeName,
+                'sbyte', "SByte", "System.SByte",
+                'short', "Int16", "System.Int16",
+                'ushort', "UInt16", "System.UInt16",
+                'ulong', "UInt64", "System.UInt64"
+            ],
+            genericMin: 0,
+            genericMax: 0
+        }, {
+            category: CsTypeCategory.Date,
+            types: ["DateTime", "System.DateTime", "DateTimeOffset", "System.DateTimeOffset"],
+            genericMin: 0,
+            genericMax: 0
+        }, {
+            category: CsTypeCategory.String,
+            types: ["Guid", "string", "System.String", "String"],
+            genericMin: 0,
+            genericMax: 0,
+        }, {
+            category: CsTypeCategory.Any,
+            types: ["object", "System.Object", "dynamic"],
+            genericMin: 0,
+            genericMax: 0,
+        }, {
+            category: CsTypeCategory.Task,
+            types: ["Task", "System.Threading.Tasks.Task"],
+            genericMin: 0,
+            genericMax: 1
+        }, {
+            category: CsTypeCategory.Tuple,
+            types: ["Tuple", "System.Tuple"],
+            genericMin: 1,
+            genericMax: 1000
+        }
+    ];
+    const cat = categories.filter(cat => cat.types.indexOf(x.name) != -1 && x.generics.length >= cat.genericMin && x.generics.length <= cat.genericMax)[0];
+    return cat ? cat.category : CsTypeCategory.Other;
+}
+exports.getTypeCategory = getTypeCategory;
+function convertToTypescript(x, config) {
+    if (config.byteArrayToString && getTypeCategory(x) == CsTypeCategory.ByteArray) {
+        return "string";
+    }
+    var arrayStr = "";
+    for (var a of x.array) {
+        arrayStr += "[";
+        for (var i = 1; i < a.dimensions; i++) {
+            arrayStr += ",";
+        }
+        arrayStr += "]";
+    }
+    return convertToTypescriptNoArray(x, config) + arrayStr;
+}
+exports.convertToTypescript = convertToTypescript;
+function convertToTypescriptNoArray(value, config) {
+    const category = getTypeCategory(value);
+    switch (category) {
+        case CsTypeCategory.Enumerable: {
+            if (value.generics.length == 0) {
+                return "any[]";
+            }
+            else if (value.generics.length == 1) {
+                return convertToTypescript(value.generics[0], config) + "[]";
+            }
+            else {
+                throw "";
+            }
+        }
+        case CsTypeCategory.Dictionary: {
+            let keyType = (getTypeCategory(value.generics[0]) == CsTypeCategory.Number) ? "number" : "string";
+            return `{ [key: ${keyType}]: ${convertToTypescript(value.generics[1], config)} }`;
+        }
+        case CsTypeCategory.Nullable: {
+            return `${convertToTypescript(value.generics[0], config)} | null`;
+        }
+        case CsTypeCategory.Tuple: {
+            let x;
+            let tupleElements = value.generics.map((v, i) => `Item${i + 1}: ${convertToTypescript(v, config)}`);
+            let join = tupleElements.reduce((a, b) => a ? a + ", " + b : b, "");
+            return `{ ${join} }`;
+        }
+        case CsTypeCategory.Task: {
+            const promLike = (t) => "Promise<" + t + ">";
+            return value.generics.length == 0 ? promLike("void") : promLike(convertToTypescript(value.generics[0], config));
+        }
+        case CsTypeCategory.Boolean: {
+            return "boolean";
+        }
+        case CsTypeCategory.Number:
+        case CsTypeCategory.ByteArray: {
+            return "number";
+        }
+        case CsTypeCategory.Date: {
+            return config.dateToDateOrString ? "Date | string" : "Date";
+        }
+        case CsTypeCategory.String: {
+            return "string";
+        }
+        case CsTypeCategory.Any: {
+            return "any";
+        }
+        case CsTypeCategory.Other: {
+            if (value.generics.length > 0) {
+                var generics = value.generics.map(x => convertToTypescript(x, config)).reduce((a, b) => a ? a + ", " + b : b, "");
+                return `${value.name}<${generics}>`;
+            }
+            else {
+                return value.name;
+            }
+        }
+    }
+}
+/**Split on top level by a given separator, separators inside < >, [ ], { } or ( ) groups are not considered
+ *
+ * @param separator One char separators
+ */
+function splitTopLevel(text, separators, openGroup = ["[", "(", "<", "{"], closeGroup = ["]", ")", ">", "}"]) {
+    var ret = [];
+    var level = 0;
+    var current = "";
+    for (let i = 0; i < text.length; i++) {
+        let char = text.charAt(i);
+        if (openGroup.indexOf(char) != -1) {
+            level++;
+        }
+        if (closeGroup.indexOf(char) != -1) {
+            level--;
+        }
+        if (level == 0 && separators.indexOf(char) != -1) {
+            ret.push(current);
+            current = "";
+        }
+        else {
+            current += char;
+        }
+    }
+    if (current != "")
+        ret.push(current);
+    return ret;
+}
+exports.splitTopLevel = splitTopLevel;
+/**Split on top level commas */
+function splitCommas(text) {
+    return splitTopLevel(text, [","]);
+}
+/**Parse an array definition */
+function parseArray(code) {
+    let ret = [];
+    for (let i = 0; i < code.length; i++) {
+        let char = code.charAt(i);
+        if (char == "[") {
+            ret.push({ dimensions: 1 });
+        }
+        if (char == "," && ret.length) {
+            ret[ret.length - 1].dimensions++;
+        }
+    }
+    return ret;
+}
+/**Parse a C# type, returns null if the given type could not be parsed */
+function parseType(code) {
+    //Remove all spaces:
+    code = code.replace(" ", "");
+    const patt = compose_1.seq(compose_1.cap(regexs_1.identifier), regexs_1.spaceOptional, compose_1.optional(/<(.*)>/), regexs_1.spaceOptional, compose_1.cap(compose_1.optional(/\?/)), regexs_1.spaceOptional, compose_1.zeroOrMore(compose_1.cap(/\[[,\[\]]*\]/)));
+    const arr = patt.exec(code);
+    if (!arr) {
+        return null;
+    }
+    //Pattern groups:
+    const name = arr[1];
+    const genericsStr = splitCommas(arr[2] || "");
+    const nullable = arr[3] == "?";
+    const arraysStr = arr[4] || "";
+    const arrays = parseArray(arraysStr);
+    const genericsOrNull = genericsStr.map(x => parseType(x));
+    const genericParseError = genericsOrNull.filter(x => x == null).length > 0;
+    if (genericParseError)
+        return null;
+    const generics = genericsOrNull.map(x => x);
+    if (nullable) {
+        var underlyingType = { name, generics, array: [] };
+        return {
+            name: "Nullable",
+            generics: [underlyingType],
+            array: arrays
+        };
+    }
+    else {
+        return { name, generics, array: arrays };
+    }
+}
+exports.parseType = parseType;
 
 
 /***/ }),
@@ -9805,6 +10521,117 @@ function octokitRestApiEndpoints (octokit) {
 
 /***/ }),
 
+/***/ 516:
+/***/ (function(__unusedmodule, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+const properties_1 = __webpack_require__(825);
+const methods_1 = __webpack_require__(567);
+const generators_1 = __webpack_require__(894);
+const commentDoc_1 = __webpack_require__(252);
+const classes_1 = __webpack_require__(804);
+function csFunction(parse, generate) {
+    return function (code, config) {
+        const parseResult = parse(code);
+        if (!parseResult) {
+            return null;
+        }
+        else {
+            return {
+                result: generate(parseResult.data, config),
+                index: parseResult.index,
+                length: parseResult.length
+            };
+        }
+    };
+}
+/**Convert a c# automatic or fat arrow property to a typescript property. Returns null if the string didn't match */
+const csAutoProperty = csFunction(properties_1.parseProperty, generators_1.generateProperty);
+/**Convert a C# method to a typescript method signature */
+const csMethod = csFunction(methods_1.parseMethod, generators_1.generateMethod);
+const csConstructor = csFunction(methods_1.parseConstructor, generators_1.generateConstructor);
+const csCommentSummary = csFunction(commentDoc_1.parseXmlDocBlock, commentDoc_1.generateJsDoc);
+const csClass = csFunction(classes_1.parseClass, generators_1.generateClass);
+function csAttribute(code, config) {
+    var patt = /[ \t]*\[\S*\][ \t]*\r?\n/;
+    var arr = patt.exec(code);
+    if (arr == null)
+        return null;
+    return {
+        result: "",
+        index: arr.index,
+        length: arr[0].length
+    };
+}
+function csPublicMember(code, config) {
+    var patt = /public\s*(?:(?:abstract)|(?:sealed))?(\S*)\s+(.*)\s*{/;
+    var arr = patt.exec(code);
+    var tsMembers = {
+        'class': 'interface',
+        'struct': 'interface'
+    };
+    if (arr == null)
+        return null;
+    var tsMember = tsMembers[arr[1]];
+    var name = generators_1.trimMemberName(arr[2], config);
+    return {
+        result: `export ${tsMember || arr[1]} ${name} {`,
+        index: arr.index,
+        length: arr[0].length
+    };
+}
+/**Find the next match */
+function findMatch(code, startIndex, config) {
+    code = code.substr(startIndex);
+    var functions = [
+        csClass,
+        csAutoProperty,
+        csConstructor,
+        csMethod,
+        csCommentSummary,
+        csAttribute,
+        csPublicMember
+    ];
+    var firstMatch = null;
+    for (let i = 0; i < functions.length; i++) {
+        var match = functions[i](code, config);
+        if (match != null && (firstMatch == null || match.index < firstMatch.index)) {
+            firstMatch = match;
+        }
+    }
+    return firstMatch ? {
+        result: firstMatch.result,
+        index: firstMatch.index + startIndex,
+        length: firstMatch.length
+    } : null;
+}
+/**Convert c# code to typescript code */
+/* ENTRY POINT */
+function cs2ts(code, config) {
+    var ret = "";
+    var index = 0;
+    while (true) {
+        var nextMatch = findMatch(code, index, config);
+        if (nextMatch == null)
+            break;
+        //add the last unmatched code:
+        ret += code.substr(index, nextMatch.index - index);
+        //add the matched code:
+        ret += nextMatch.result;
+        //increment the search index:
+        index = nextMatch.index + nextMatch.length;
+    }
+    //add the last unmatched code:
+    ret += code.substr(index);
+    return ret;
+}
+exports.cs2ts = cs2ts;
+
+
+/***/ }),
+
 /***/ 519:
 /***/ (function(module) {
 
@@ -9975,6 +10802,18 @@ module.exports = new Type('tag:yaml.org,2002:js/function', {
   predicate: isFunction,
   represent: representJavascriptFunction
 });
+
+
+/***/ }),
+
+/***/ 548:
+/***/ (function(__unusedmodule, exports) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.maxBodyDepth = 8;
+exports.maxExpressionDepth = 4;
 
 
 /***/ }),
@@ -10917,6 +11756,93 @@ module.exports = get;
 
 /***/ }),
 
+/***/ 567:
+/***/ (function(__unusedmodule, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+const compose_1 = __webpack_require__(179);
+const regexs = __webpack_require__(113);
+const config_1 = __webpack_require__(548);
+const modifiers_1 = __webpack_require__(575);
+const { type, identifier, space, spaceOrLineOptional, spaceOrLine } = regexs;
+function parseParameters(code) {
+    const parameter = compose_1.seq(compose_1.cap(type), spaceOrLine, compose_1.cap(identifier), compose_1.optional(spaceOrLine));
+    const all = regexs.allMatches(code, parameter);
+    return all.map(x => ({
+        type: x[1],
+        name: x[2]
+    }));
+}
+exports.parseParameters = parseParameters;
+const { parseMethodRegex, parseConstructorRegex } = (() => {
+    const modifier = compose_1.cap(modifiers_1.accessModifierRegex);
+    const async = compose_1.cap(compose_1.optional(compose_1.seq(/async/, spaceOrLine)));
+    const parameter = compose_1.seq(type, spaceOrLine, identifier, compose_1.optional(spaceOrLine));
+    const paramSeparator = compose_1.seq(/,/, compose_1.optional(spaceOrLine));
+    const paramList = compose_1.seq(/\(/, compose_1.cap(compose_1.optional(compose_1.commas(parameter, paramSeparator))), /\)/);
+    const methodType = compose_1.seq(compose_1.cap(type), spaceOrLine);
+    const methodName = compose_1.seq(compose_1.cap(identifier), compose_1.optional(spaceOrLine));
+    const body = compose_1.seq(spaceOrLineOptional, compose_1.cap(compose_1.neasted("{", "}", config_1.maxBodyDepth, false)));
+    const method = compose_1.seq(modifier, async, methodType, methodName, paramList, body);
+    const constructorCall = compose_1.optional(compose_1.seq(spaceOrLineOptional, /:/, spaceOrLineOptional, compose_1.any(/base/, /this/), spaceOrLineOptional, compose_1.neasted("(", ")", config_1.maxExpressionDepth, false)));
+    const constructor = compose_1.seq(modifier, methodName, paramList, constructorCall, body);
+    return { parseMethodRegex: method, parseConstructorRegex: constructor };
+})();
+function parseConstructor(code) {
+    const method = parseConstructorRegex;
+    const match = method.exec(code);
+    if (!match) {
+        return null;
+    }
+    else {
+        return {
+            index: match.index,
+            length: match[0].length,
+            data: {
+                modifier: match[1],
+                name: match[2],
+                parameters: parseParameters(match[3]),
+                body: match[4]
+            }
+        };
+    }
+}
+exports.parseConstructor = parseConstructor;
+function parseMethod(code) {
+    //Regex captures:
+    //modifier
+    //async
+    //type
+    //name
+    //paramList
+    //body
+    const method = parseMethodRegex;
+    const match = method.exec(code);
+    if (!match) {
+        return null;
+    }
+    else {
+        return {
+            index: match.index,
+            length: match[0].length,
+            data: {
+                modifier: match[1],
+                async: !!match[2],
+                returnType: match[3],
+                name: match[4],
+                parameters: parseParameters(match[5]),
+                body: match[6]
+            }
+        };
+    }
+}
+exports.parseMethod = parseMethod;
+
+
+/***/ }),
+
 /***/ 571:
 /***/ (function(module) {
 
@@ -10952,6 +11878,19 @@ function hasPreviousPage (link) {
   deprecate(`octokit.hasPreviousPage() – You can use octokit.paginate or async iterators instead: https://github.com/octokit/rest.js#pagination.`)
   return getPageLinks(link).prev
 }
+
+
+/***/ }),
+
+/***/ 575:
+/***/ (function(__unusedmodule, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+const compose_1 = __webpack_require__(179);
+const regexs_1 = __webpack_require__(113);
+exports.accessModifierRegex = compose_1.optional(compose_1.seq(compose_1.any(/protected\s+internal/, /private\s+protected/, /public/, /private/, /protected/, /internal/), regexs_1.spaceOrLine));
 
 
 /***/ }),
@@ -15101,6 +16040,51 @@ function authenticationRequestError (state, error, options) {
 
 /***/ }),
 
+/***/ 804:
+/***/ (function(__unusedmodule, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+const compose_1 = __webpack_require__(179);
+const regexs = __webpack_require__(113);
+const types_1 = __webpack_require__(253);
+const modifiers_1 = __webpack_require__(575);
+function parseInherits(code) {
+    const types = types_1.splitTopLevel(code, [","]);
+    return types;
+}
+exports.parseInherits = parseInherits;
+function parseClass(code) {
+    const modifier = compose_1.optional(compose_1.seq(compose_1.cap(modifiers_1.accessModifierRegex), compose_1.optional(/partial\s+/), compose_1.optional(/(?:sealed|abstract)\s+/)));
+    const { identifier, space, spaceOptional, type, spaceOrLine } = regexs;
+    const classType = compose_1.seq(compose_1.cap(compose_1.any(/class/, /interface/, /struct/)), space);
+    const className = compose_1.cap(identifier);
+    const separator = /,\s*/;
+    const inherits = compose_1.optional(compose_1.seq(/\s*:\s/, compose_1.cap(compose_1.commas(type, separator))));
+    const classRegex = compose_1.seq(modifier, classType, className, inherits);
+    const match = classRegex.exec(code);
+    if (!match) {
+        return null;
+    }
+    else {
+        return {
+            index: match.index,
+            length: match[0].length,
+            data: {
+                isPublic: (match[1] || "").trim() == "public",
+                type: match[2],
+                name: match[3],
+                inherits: parseInherits(match[4] || "")
+            }
+        };
+    }
+}
+exports.parseClass = parseClass;
+
+
+/***/ }),
+
 /***/ 805:
 /***/ (function(module) {
 
@@ -15170,6 +16154,63 @@ function checkMode (stat, options) {
 
   return ret
 }
+
+
+/***/ }),
+
+/***/ 825:
+/***/ (function(__unusedmodule, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+const compose_1 = __webpack_require__(179);
+const regexs = __webpack_require__(113);
+function parseProperty(code) {
+    const { identifier, space, spaceOptional, type, spaceOrLineOptional } = regexs;
+    const propAttributes = compose_1.optional(compose_1.seq(compose_1.commas(compose_1.seq(/\[/, identifier, /.*/, /\]/), spaceOrLineOptional), spaceOrLineOptional));
+    const propModifier = compose_1.optional(compose_1.seq(compose_1.cap(compose_1.seq(compose_1.optional(compose_1.any(/public/, /private/, /protected/, /internal/)), compose_1.optional(compose_1.any(/\s+new/, /\s+override/)))), /\s*/));
+    const propName = compose_1.seq(compose_1.cap(identifier), spaceOptional);
+    //Regex que captura el get set con initializador o el fat arrow
+    const getSetOrFatArrow = (() => {
+        const getSetModifier = compose_1.optional(compose_1.any(/internal/, /public/, /private/, /protected/));
+        const get = compose_1.seq(getSetModifier, spaceOptional, /get\s*;/);
+        const set = compose_1.seq(getSetModifier, spaceOptional, /set\s*;/);
+        const initializer = compose_1.optional(compose_1.seq(spaceOptional, /=/, spaceOptional, compose_1.cap(/.*/), /;/));
+        const getSet = compose_1.seq(/{/, spaceOptional, get, spaceOptional, compose_1.optional(set), spaceOptional, /}/, initializer);
+        const fatArrow = /=>.*;/;
+        const getSetOrFatArrow = compose_1.any(getSet, fatArrow);
+        return getSetOrFatArrow;
+    })();
+    const member = (() => {
+        const initializer = compose_1.optional(compose_1.seq(spaceOptional, /=/, spaceOptional, compose_1.cap(/.*/)));
+        const ending = /;/;
+        const member = compose_1.seq(initializer, ending);
+        return member;
+    })();
+    //Regex que captura a toda la propiedad:
+    const prop = compose_1.seq(propAttributes, propModifier, compose_1.seq(compose_1.cap(type), space), propName, compose_1.cap(compose_1.any(getSetOrFatArrow, member)));
+    const match = prop.exec(code);
+    if (!match) {
+        return null;
+    }
+    else {
+        const isProperty = getSetOrFatArrow.test(match[4]);
+        const isMember = !isProperty;
+        return {
+            index: match.index,
+            length: match[0].length,
+            data: {
+                modifier: match[1],
+                type: match[2],
+                name: match[3],
+                initializer: isMember ? match[6] : match[5],
+                isField: isMember
+            }
+        };
+    }
+}
+exports.parseProperty = parseProperty;
 
 
 /***/ }),
@@ -15654,6 +16695,135 @@ module.exports = new Type('tag:yaml.org,2002:js/regexp', {
   predicate: isRegExp,
   represent: representJavascriptRegExp
 });
+
+
+/***/ }),
+
+/***/ 894:
+/***/ (function(__unusedmodule, exports, __webpack_require__) {
+
+"use strict";
+
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (Object.hasOwnProperty.call(mod, k)) result[k] = mod[k];
+    result["default"] = mod;
+    return result;
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const types = __importStar(__webpack_require__(253));
+function generateType(type, config) {
+    const parseType = types.parseType(type);
+    return trimMemberName(parseType ? types.convertToTypescript(parseType, config) : type, config);
+}
+function generateParam(value, config) {
+    const tsType = generateType(value.type, config);
+    return value.name + ": " + tsType;
+}
+function generateControllerBody(name, params) {
+    const isUriSimpleType = (x) => {
+        const parseType = types.parseType(x.type);
+        return parseType && types.isUriSimpleType(parseType);
+    };
+    const simpleParams = params.filter(isUriSimpleType).map(x => x.name).join(", ");
+    const bodyParams = params.filter(x => !isUriSimpleType(x)).map(x => x.name).join(", ");
+    if (bodyParams.length == 0) {
+        return ` => await controller('${name}', {${simpleParams}}), `;
+    }
+    else {
+        return ` => await controller('${name}', {${simpleParams}}, ${bodyParams}), `;
+    }
+}
+function generateMethod(value, config) {
+    const paramList = value.parameters.map(x => generateParam(x, config)).join(", ");
+    const returnType = generateType(value.returnType, config);
+    const fullType = "(" + paramList + "): " + returnType;
+    const lambdaBody = (value.name + ": " + (value.async ? "async " : "")) + fullType;
+    return (config.methodStyle == "signature" ? (value.name + fullType + ";") :
+        config.methodStyle == "lambda" ? lambdaBody + " => { throw new Error('TODO'); }, " :
+            config.methodStyle == "controller" ? lambdaBody + generateControllerBody(value.name, value.parameters)
+                : config.methodStyle);
+}
+exports.generateMethod = generateMethod;
+function generateConstructor(value, config) {
+    const paramList = value.parameters.map(x => generateParam(x, config)).join(", ");
+    return config.removeConstructors ? "" : ("new(" + paramList + "): " + value.name + ";");
+}
+exports.generateConstructor = generateConstructor;
+const myClass = {
+    myMethod: (hola) => {
+        throw new Error("TODO: Implement me");
+    }
+};
+/**Generate a typescript property */
+function generateProperty(prop, config) {
+    //trim spaces:
+    const tsType = generateType(prop.type, config);
+    const name = getTypescriptPropertyName(prop.name, config);
+    const printInitializer = !config.ignoreInitializer && (!!prop.initializer);
+    const removeNameRegex = config.removeNameRegex != "" && (new RegExp(config.removeNameRegex)).test(name);
+    const removeModifier = config.removeWithModifier.indexOf(prop.modifier) != -1;
+    const removeProp = removeNameRegex || removeModifier;
+    const modifier = prop.modifier; //TODO: Convert C# modifiers to TS modifiers
+    if (removeProp) {
+        return "";
+    }
+    return ((config.preserveModifiers ? (modifier + " ") : "") +
+        (printInitializer ?
+            (name + ": " + tsType + " = " + prop.initializer + ";") :
+            (name + ": " + tsType + ";")));
+}
+exports.generateProperty = generateProperty;
+function generateClass(x, config) {
+    const inheritsTypes = x.inherits.map(x => generateType(x, config));
+    const name = x.name;
+    const modifier = (x.isPublic ? "export " : "");
+    const keyword = config.classToInterface ? "interface" : "class";
+    const prefix = `${modifier}${keyword} ${name}`;
+    if (inheritsTypes.length > 0) {
+        return `${prefix} extends ${inheritsTypes.join(", ")}`;
+    }
+    else {
+        return prefix;
+    }
+}
+exports.generateClass = generateClass;
+function getTypescriptPropertyName(name, config) {
+    var isAbbreviation = name.toUpperCase() == name;
+    name = trimMemberName(name, config);
+    if (config.propertiesToCamelCase && !isAbbreviation) {
+        return name[0].toLowerCase() + name.substr(1);
+    }
+    return name;
+}
+function trimMemberName(name, config) {
+    name = name.trim();
+    var postfixes = config.trimPostfixes;
+    if (!postfixes)
+        return name;
+    var trimRecursive = config.recursiveTrimPostfixes;
+    var trimmed = true;
+    do {
+        trimmed = false;
+        for (let postfix of postfixes) {
+            if (!name.endsWith(postfix))
+                continue;
+            name = trimEnd(name, postfix);
+            if (!trimRecursive)
+                return name;
+            trimmed = true;
+        }
+    } while (trimmed); // trim recursive until no more occurrences will be found
+    return name;
+}
+exports.trimMemberName = trimMemberName;
+function trimEnd(text, postfix) {
+    if (text.endsWith(postfix)) {
+        return text.substr(0, text.length - postfix.length);
+    }
+    return text;
+}
 
 
 /***/ }),
@@ -16312,6 +17482,8 @@ const core = __importStar(__webpack_require__(827));
 const github = __importStar(__webpack_require__(148));
 const yaml = __importStar(__webpack_require__(812));
 const minimatch_1 = __webpack_require__(689);
+const extension_1 = __webpack_require__(516);
+const utils_1 = __webpack_require__(38);
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
@@ -16326,16 +17498,48 @@ function run() {
             core.debug(`fetching changed files for pr #${prNumber}`);
             const changedFiles = yield getChangedFiles(client, prNumber);
             const labelGlobs = yield getLabelGlobs(client, configPath);
-            const csGlob = labelGlobs['cs'];
             const changedCsFile = [];
-            for (const changedFile of changedFiles.entries()) {
-                if (checkGlob(changedFile[1], csGlob)) {
-                    changedCsFile.push(changedFile[1]);
+            let csPath = '';
+            let tsPath = '';
+            for (const [label, globs] of labelGlobs.entries()) {
+                if (label === 'cs') {
+                    for (let i = 0; i < changedFiles.length; i++) {
+                        if (checkGlob(changedFiles[i], globs)) {
+                            changedCsFile.push(changedFiles[i]);
+                        }
+                    }
+                    csPath = globs[0].replace(/\*/, '');
+                }
+                else if (label === 'ts') {
+                    tsPath = globs[0].replace(/\*/, '');
+                }
+            }
+            let commentList = ['Cs to ts checks'];
+            for (let i = 0; i < changedCsFile.length; i++) {
+                let tsFileName = changedCsFile[i].name
+                    .replace(csPath, tsPath)
+                    .replace(/cs/g, 'ts');
+                const csFileContent = yield fetchContent(client, changedCsFile[i].name);
+                let tsContent = '';
+                try {
+                    tsContent = yield fetchContent(client, tsFileName);
+                }
+                catch (_a) { }
+                const tsContentFromCs = extension_1.cs2ts(csFileContent, utils_1.getConfig());
+                let label = `content Not Matching File: ${changedCsFile[i].name}`;
+                if (removeSpaces(tsContentFromCs) !== removeSpaces(tsContent)) {
+                    commentList.push(`**${changedCsFile[i].name} not matching ${tsFileName} content**`);
+                    yield addLabels(client, prNumber, [label]);
+                }
+                else {
+                    commentList.push(`*${changedCsFile[i].name} matching ${tsFileName} content*`);
+                    yield removeLabel(client, prNumber, label);
                 }
             }
             if (changedCsFile.length > 0) {
                 yield addLabels(client, prNumber, ['csFileChanged']);
             }
+            yield addComment(client, prNumber, commentList.join('\n'));
         }
         catch (error) {
             core.error(error);
@@ -16343,6 +17547,11 @@ function run() {
         }
     });
 }
+function removeSpaces(str) {
+    str = str.replace(/[{};:,]/g, ' ');
+    return str.replace(/ +(?= )/g, '');
+}
+exports.removeSpaces = removeSpaces;
 function getPrNumber() {
     const pullRequest = github.context.payload.pull_request;
     if (!pullRequest) {
@@ -16422,6 +17631,31 @@ function addLabels(client, prNumber, labels) {
             repo: github.context.repo.repo,
             issue_number: prNumber,
             labels: labels
+        });
+    });
+}
+function removeLabel(client, prNumber, label) {
+    return __awaiter(this, void 0, void 0, function* () {
+        try {
+            yield client.issues.removeLabel({
+                owner: github.context.repo.owner,
+                repo: github.context.repo.repo,
+                issue_number: prNumber,
+                name: label
+            });
+        }
+        catch (_a) {
+            // Label does not exist
+        }
+    });
+}
+function addComment(client, prNumber, comment) {
+    return __awaiter(this, void 0, void 0, function* () {
+        yield client.issues.createComment({
+            owner: github.context.repo.owner,
+            repo: github.context.repo.repo,
+            issue_number: prNumber,
+            body: comment
         });
     });
 }
