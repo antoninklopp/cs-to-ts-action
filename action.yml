@@ -1,5 +1,5 @@
-name: 'Your name here'
-description: 'Provide a description here'
+name: 'cs-to-ts'
+description: 'An action that checks if your cs and ts models are synchronized'
 author: 'antoninklopp'
 inputs: 
   repo-token:
