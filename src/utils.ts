@@ -1,4 +1,4 @@
-import { ExtensionConfig } from './Csharp2ts/config'
+import {ExtensionConfig} from './Csharp2ts/config'
 
 export function getConfig(): ExtensionConfig {
     return {

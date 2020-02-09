@@ -17528,8 +17528,7 @@ function run() {
                 try {
                     tsContent = yield fetchContent(client, tsFileName);
                 }
-                catch (_a) {
-                }
+                catch (_a) { }
                 const tsContentFromCs = extension_1.cs2ts(csFileContent, utils_1.getConfig());
                 if (removeSpaces(tsContentFromCs) !== removeSpaces(tsContent)) {
                     commentList.push(`**${changedCsFile[i].name} not matching ${tsFileName} content**`);
@@ -17547,7 +17546,7 @@ function run() {
             }
             else {
                 yield removeLabel(client, prNumber, utils_1.errorLabels.notMatching);
-                commentList.push("All files matching");
+                commentList.push('All files matching');
             }
             yield addComment(client, prNumber, commentList.join('\n'));
         }
