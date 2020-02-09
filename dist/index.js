@@ -16326,7 +16326,6 @@ function run() {
             core.debug(`fetching changed files for pr #${prNumber}`);
             const changedFiles = yield getChangedFiles(client, prNumber);
             const labelGlobs = yield getLabelGlobs(client, configPath);
-            const labels = [];
             const csGlob = labelGlobs['cs'];
             const changedCsFile = [];
             for (const changedFile of changedFiles.entries()) {
@@ -16403,13 +16402,16 @@ function getLabelGlobMapFromObject(configObject) {
     }
     return labelGlobs;
 }
-function checkGlob(changedFile, glob) {
-    core.debug(` checking pattern ${glob}`);
-    const matcher = new minimatch_1.Minimatch(glob);
-    core.debug(` - ${changedFile}`);
-    if (matcher.match(changedFile.name)) {
-        core.debug(` ${changedFile} matches`);
-        return true;
+function checkGlob(changedFile, globs) {
+    for (const glob of globs) {
+        core.debug(` checking pattern ${glob}`);
+        core.debug(` checking pattern ${glob}`);
+        const matcher = new minimatch_1.Minimatch(glob);
+        core.debug(` - ${changedFile}`);
+        if (matcher.match(changedFile.name)) {
+            core.debug(` ${changedFile} matches`);
+            return true;
+        }
     }
     return false;
 }
