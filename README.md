@@ -3,6 +3,10 @@
 
 This github action allows you to check if your C# and your ts models are synchronized. 
 
+## Example project
+
+https://github.com/antoninklopp/cs-to-ts-action-example is an example project where you can find a complete set up of this action
+
 ## Set up
 
 Add the action to your repo and you should have a file named cs-to-ts.yml that appears under the .github/workflows folder and should look like
